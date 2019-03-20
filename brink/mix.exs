@@ -30,6 +30,8 @@ defmodule Brink.Mixfile do
       {:flow, "~> 0.14", only: :dev, runtime: false},
       {:dialyxir, "~> 0.5", only: :dev, runtime: false},
       {:ex_doc, "~> 0.19", only: :dev, runtime: false},
+      {:mock, "~> 0.3.0", only: :test},
+      {:propcheck, "~> 1.1", only: [:test, :dev]},
       {:gen_stage, "~> 0.14"},
       {:redix, "~> 0.9.0"}
     ]

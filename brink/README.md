@@ -60,3 +60,6 @@ Flow.from_specs(
 ```
 The Brink consumer will first consume events from the Redis Stream and then
 produce Elixir events for `your_flow_functions` to consume.
+
+## Running Tests
+Run the tests using `mix test`.

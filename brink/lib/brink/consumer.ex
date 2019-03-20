@@ -4,7 +4,7 @@ defmodule Brink.Consumer do
   @moduledoc """
   Brink.Consumer is a GenStage producer that consumes events from a Redis
   Stream. It can be used, with one or more processes, as a source for
-  Flow.from_stages/Flow.from_specs . A Brick.Consumer process is a single
+  Flow.from_stages/Flow.from_specs . A Brink.Consumer process is a single
   consumer part of a consumer group. It is important to have unique names
   for consumers and it's important to restart a consumer after a crash with
   the same name so that unprocessed messages will be retries.
@@ -131,7 +131,7 @@ defmodule Brink.Consumer do
   def handle_demand(incoming_demand, state) do
     new_state = %{state | demand: state.demand + incoming_demand}
 
-    read_from_stream(new_state)
+    __MODULE__.read_from_stream(new_state)
   end
 
   defp read_from_stream(%{demand: 0} = state), do: {:noreply, [], state}
