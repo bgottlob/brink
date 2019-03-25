@@ -128,82 +128,27 @@ defmodule Brink.Consumer do
   # ignoring incoming messages to clear mailbox
   def handle_info(_, state), do: {:noreply, [], state}
 
+  # TODO: Thing to test - if the number of events < demand, send those events
+  # to the consumer - it's ok if the producer cannot fill demand - it just needs
+  # Ways to handle not being able to fill all demand:
+  # https://elixirforum.com/t/my-genstage-producer-runs-out-of-work-to-do-i-buffer-demand-but-how-do-i-know-there-is-new-work/3437/4
   def handle_demand(incoming_demand, state) do
-    new_state = %{state | demand: state.demand + incoming_demand}
-
-    __MODULE__.read_from_stream(new_state)
+    read_from_stream(%{state | demand: state.demand + incoming_demand})
   end
 
   defp read_from_stream(%{demand: 0} = state), do: {:noreply, [], state}
-
-  defp read_from_stream(%{stream: stream} = state) do
-    read_command = build_xread(state)
-
-    case Redix.command(state.client, read_command) do
-      {:ok, [[^stream, [_ | _] = events]]} ->
-        next_id = pick_next_id(state, events)
-
-        new_state = %{state | demand: state.demand - length(events), next_id: next_id}
-
-        if new_state.demand > 0 do
-          poll_stream(state.poll_interval)
-        end
-
-        formatted_events = Enum.map(events, &format_event/1)
-
-        {:noreply, formatted_events, new_state}
-
-      {:ok, _} ->
-        poll_stream(state.poll_interval)
-        new_state = %{state | next_id: pick_next_id(state, [])}
-        {:noreply, [], new_state}
-
-      {:error, err} ->
-        {:stop, err, state}
+  defp read_from_stream(state) do
+    case Brink.Lib.xread(state) do
+      {:ok, events} ->
+        state = %{state | demand: state.demand - length(events), next_id: pick_next_id(state, events)}
+        if state.demand > 0, do: poll_stream(state.poll_interval)
+        {:noreply, Enum.map(events, &Brink.Lib.format_event/1), state}
+      {:error, err} -> {:stop, err, state}
     end
   end
 
   defp poll_stream(interval) do
     Process.send_after(self(), :read_from_stream, interval)
-  end
-
-  defp build_xread(%{mode: :single, next_id: "$"} = state) do
-    [
-      "XREAD",
-      "BLOCK",
-      state.initial_block_timeout,
-      "COUNT",
-      state.demand,
-      "STREAMS",
-      state.stream,
-      "$"
-    ]
-  end
-
-  defp build_xread(%{mode: :single} = state) do
-    [
-      "XREAD",
-      "COUNT",
-      state.demand,
-      "STREAMS",
-      state.stream,
-      state.next_id
-    ]
-  end
-
-  defp build_xread(%{mode: :group} = state) do
-    [
-      "XREADGROUP",
-      "GROUP",
-      state.group,
-      state.consumer,
-      "COUNT",
-      state.demand,
-      "NOACK",
-      "STREAMS",
-      state.stream,
-      state.next_id
-    ]
   end
 
   defp create_group(client, stream, group) do
@@ -241,13 +186,7 @@ defmodule Brink.Consumer do
     end
   end
 
-  defp format_event([id, dict]) do
-    dict =
-      dict
-      |> Enum.chunk_every(2)
-      |> Enum.map(fn [k, v] -> {:"#{k}", v} end)
-      |> Map.new()
-
-    {id, dict}
-  end
+  #def testboi do
+  #  Brink.Lib.xread(%{mode: :group, stream: "hi", consumer: "hi", group: "hi", next_id: "HI", count: 1000})
+  #end
 end

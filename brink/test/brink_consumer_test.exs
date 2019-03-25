@@ -24,9 +24,19 @@ defmodule BrinkTest do
     end
   end
 
-  test "handle_demand when there are no messages to read and fill demand with" do
-    with_mock Brink.Consumer, [:passthrough], [read_from_stream: fn(state) -> {:noreply, [], state} end] do
-      assert {:noreply, [], %{ demand: 10 }} = Brink.Consumer.handle_demand(5, %{demand: 5})
+  test "handle_demand buffers demand when there is nothing to send back" do
+    with_mock Brink.Lib, [:passthrough], [xread: fn(_) -> {:ok, [["123-1", ["hey", "joe"]]]} end] do
+      assert {:noreply, [{"123-1", %{hey: "joe"}}], %{ demand: 9, mode: :single, next_id: "123-1", poll_interval: 100 }} == Brink.Consumer.handle_demand(5, %{mode: :single, demand: 5, next_id: "$", poll_interval: 100})
     end
   end
+
+  #property "handle_demand buffers demand when there is nothing to send back" do
+  #  forall {event} <- {event()} do
+  #    with_mock Brink.Lib, [:passthrough], [xread: fn(_) -> {:ok, [event]} end] do
+  #      assert {:noreply, [event], %{ demand: 9 }} == Brink.Consumer.handle_demand(5, %{mode: :single, demand: 5, next_id: "$", poll_interval: 100})
+  #    end
+  #  end
+  #end
+
+  def event(), do: [utf8(), [utf8(), utf8()]]
 end
