@@ -142,7 +142,7 @@ defmodule Brink.Consumer do
       {:ok, events} ->
         state = %{state | demand: state.demand - length(events), next_id: pick_next_id(state, events)}
         if state.demand > 0, do: poll_stream(state.poll_interval)
-        {:noreply, Enum.map(events, &Brink.Lib.format_event/1), state}
+        {:noreply, events, state}
       {:error, err} -> {:stop, err, state}
     end
   end
@@ -169,7 +169,7 @@ defmodule Brink.Consumer do
 
   defp pick_next_id(%{mode: :single}, events) do
     events
-    |> Enum.map(&List.first/1)
+    |> Enum.map(fn {id, _map} -> id end)
     |> List.last()
   end
 
