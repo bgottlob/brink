@@ -24,7 +24,7 @@ defmodule Brink.Lib do
   #) :: [String.t()]
   def xread(%{stream: stream} = args) do
     case Redix.command(args.client, build_xread(args)) do
-      {:ok, [[^stream, events]]} -> {:ok, events}
+      {:ok, [[^stream, events]]} -> {:ok, Enum.map(events, &Brink.Lib.format_event/1)}
       {:ok, _} -> {:ok, []}
       {:error, err} -> {:error, err}
     end
