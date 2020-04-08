@@ -2,6 +2,7 @@ defmodule BrinkTest.Lib do
   use ExUnit.Case
   doctest Brink.Lib
 
+  @tag :skip
   test "the default initial block timeout is set" do
     command =
       Brink.Lib.build_xread(%{
@@ -14,6 +15,7 @@ defmodule BrinkTest.Lib do
     assert Enum.at(command, 2) == 1000
   end
 
+  @tag :skip
   test "demand is passed to Redis command properly for each function clause of build_xread" do
     assert(
       ["XREAD", "BLOCK", 100, "COUNT", 10, "STREAMS", "test_stream", "$"] ==
@@ -60,6 +62,7 @@ defmodule BrinkTest.Lib do
     )
   end
 
+  @tag :skip
   test "Formats key-value dictionaries from events coming out of Redis" do
     assert(
       {"timestamp-0", %{one: "a", two: "b", three: "c"}} ==
@@ -67,6 +70,7 @@ defmodule BrinkTest.Lib do
     )
   end
 
+  @tag :skip
   test "Edge cases for format_event" do
     # No data in event
     assert({"timestamp-2", %{}} == Brink.Lib.format_event(["timestamp-2", []]))

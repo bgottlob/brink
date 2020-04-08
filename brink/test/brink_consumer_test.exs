@@ -6,6 +6,7 @@ defmodule BrinkTest do
 
   import Brink.Consumer
 
+  @tag :skip
   test "Builds a spec in single mode" do
     {module, keywords} =
       Brink.Consumer.build_spec_single_mode("redis://hi", "streamname", opt1: "hi")
@@ -21,6 +22,7 @@ defmodule BrinkTest do
            )
   end
 
+  @tag :skip
   test "handle_demand buffers demand when there is nothing to send back" do
     events = []
     prev_demand = 5
@@ -45,11 +47,37 @@ defmodule BrinkTest do
     end
   end
 
+  # A list of adjacent elements [W, X, Y, Z] where W is the key of value X and
+  # Y is the key of value Z
+  def dictionary() do
+    let m <- map(utf8(), utf8()) do
+      Enum.reduce(m, [], fn {k, v}, acc -> [k | [v | acc]] end)
+    end
+  end
+
+  def to_range(m, n) do
+    base = div(n, m)
+    {base * m, (base + 1) * m}
+  end
+
   defp msgs(num) do
     List.duplicate(["#{num}", ["thekey", "#{num}"]], num)
   end
 
-  test "handle_demand buffers demand when there is nothing to send back" do
+  def timestamp_v1() do
+    let ts <- resize(1000000, integer(0, :inf)) do
+      ts
+    end
+  end
+
+  property "collect timestamps", [:verbose] do
+    forall x <- timestamp_v1() do
+      collect(is_integer(x), to_range(1000000, x))
+    end
+  end
+
+  @tag :skip
+  test "handle_demand buffers demand when there is nothing to send back2" do
     with_mock Brink.Lib, [:passthrough], [xread: fn(_) -> {:ok, msgs(0)} end] do
       opts = %{mode: :single, next_id: "$", poll_interval: 100}
       {:noreply, _, %{demand: 45}} = handle_demand(25, Map.put(opts, :demand, 20))
@@ -61,6 +89,7 @@ defmodule BrinkTest do
     end
   end
 
+  @tag :skip
   test "buffer leftover demand when there aren't enough messages to satisfy it" do
     with_mock Brink.Lib, [:passthrough], [xread: fn(_) -> {:ok, msgs(3)} end] do
       opts = %{mode: :single, next_id: "$", poll_interval: 100}
@@ -70,6 +99,7 @@ defmodule BrinkTest do
     end
   end
 
+  @tag :skip
   test "satisfy demand when there are enough messages" do
     with_mock Brink.Lib, [:passthrough], [xread: fn(_) -> {:ok, msgs(10)} end] do
       opts = %{mode: :single, next_id: "$", poll_interval: 100}
@@ -79,11 +109,13 @@ defmodule BrinkTest do
       #{:noreply, _, %{demand: 0}}  = handle_demand(1,  Map.put(opts, :demand,  0))
       {:noreply, _, %{demand: 0}}  = handle_demand(0,  Map.put(opts, :demand,  0))
     end
+  end
 
   # NOTE: Brink.Lib.xread will never return more events than are demanded, since
   #       xread uses total demand as the COUNT parameter in the Redis call
+  @tag :skip
   test "handle_demand has enough messages to fulfill total demand" do
-    events = gen_events(9)
+    events = msgs(9)
     prev_demand = 5
     incoming_demand = 4
 
